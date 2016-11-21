@@ -63,7 +63,11 @@ PAM_PROMPT_ECHO_ON = 2
 PAM_ERROR_MSG = 3
 PAM_TEXT_INFO = 4
 
-PAM_REINITIALIZE_CRED = 0x0008  # This constant is libpam-specific.
+# These constants are libpam-specific
+PAM_ESTABLISH_CRED = 0x0002
+PAM_DELETE_CRED = 0x0004
+PAM_REINITIALIZE_CRED = 0x0008
+PAM_REFRESH_CRED = 0x0010
 
 class PamHandle(Structure):
     """wrapper class for pam_handle_t"""
@@ -239,7 +243,8 @@ def pam_end(handle, retval):
         retval = e
     raise PAMError(errno=retval)
 
-def authenticate(username, password=None, service='login', encoding='utf-8', resetcred=True):
+def authenticate(username, password=None, service='login', encoding='utf-8',
+                 resetcred=PAM_REINITIALIZE_CRED):
     """Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
 
@@ -259,7 +264,7 @@ def authenticate(username, password=None, service='login', encoding='utf-8', res
 
     ``resetcred``: Use the pam_setcred() function to
                    reinitialize the credentials.
-                   Defaults to 'True'.
+                   Defaults to 'PAM_REINITIALIZE_CRED'.
     """
 
     if password is None:
@@ -275,7 +280,7 @@ def authenticate(username, password=None, service='login', encoding='utf-8', res
     # Don't check return code of pam_setcred(), it shouldn't matter
     # if this fails
     if retval == 0 and resetcred:
-        PAM_SETCRED(handle, PAM_REINITIALIZE_CRED)
+        PAM_SETCRED(handle, resetcred)
 
     return pam_end(handle, retval)
 
