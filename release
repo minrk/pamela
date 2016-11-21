@@ -3,8 +3,10 @@
 set -e
 
 bumpversion --tag release
-python setup.py sdist --formats=gztar,zip upload
-python setup.py bdist_wheel upload
+rm -rf dist
+python setup.py sdist
+python setup.py bdist_wheel
+twine upload dist/*
 bumpversion patch
 git push
 git push --tags
