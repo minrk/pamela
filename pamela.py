@@ -292,7 +292,7 @@ def pam_end(handle, retval=0):
     raise PAMError(errno=retval)
 
 def authenticate(username, password=None, service='login', encoding='utf-8',
-                 resetcred=PAM_REINITIALIZE_CRED, close_txn=True):
+                 resetcred=PAM_REINITIALIZE_CRED, close=True):
     """Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
 
@@ -314,7 +314,7 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
                    reinitialize the credentials.
                    Defaults to 'PAM_REINITIALIZE_CRED'.
 
-    ``close_txn``: If True (default) the transaction will be closed after
+    ``close``: If True (default) the transaction will be closed after
                    authentication; if False the (open) PamHandle instance
                    will be returned.
     """
@@ -334,7 +334,7 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
     if retval == 0 and resetcred:
         PAM_SETCRED(handle, resetcred)
 
-    if close_txn:
+    if close:
         return pam_end(handle, retval)
     elif retval != 0:
         raise PAMError(errno=retval)
