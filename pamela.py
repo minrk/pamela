@@ -79,6 +79,42 @@ class PamHandle(Structure):
         Structure.__init__(self)
         self.handle = 0
 
+    def get_env(self, var, encoding='utf-8'):
+        ret = PAM_GETENV(self, var.encode(encoding))
+        if ret is None:
+            raise PAMError()
+        else:
+            return ret.decode(encoding)
+
+    def put_env(self, k, v, encoding='utf-8'):
+        retval = PAM_PUTENV(
+            self,
+            ('%s=%s' % (k, v)).encode(encoding))
+        if retval != 0:
+            raise PAMError(errno=retval)
+
+    def del_env(self, k, encoding='utf-8'):
+        retval = PAM_PUTENV(
+            self,
+            k.encode(encoding))
+        if retval != 0:
+            raise PAMError(errno=retval)
+
+    def get_envlist(self, encoding='utf-8'):
+        ret = PAM_GETENVLIST(self)
+        if ret is None:
+            raise PAMError()
+
+        parsed = {}
+        for i in PAM_GETENVLIST(self):
+            if i:
+                k, v = i.decode(encoding).split('=', 1)
+                parsed[k] = v
+            else:
+                break
+        return parsed
+
+
 PAM_STRERROR = LIBPAM.pam_strerror
 PAM_STRERROR.restype = c_char_p
 PAM_STRERROR.argtypes = [PamHandle, c_int]
@@ -103,7 +139,7 @@ class PAMError(Exception):
     def __repr__(self):
         en = '' if self.errno is None else ' %i' % self.errno
         return "<PAM Error%s: '%s'>" % (en, self.message)
-    
+
     def __str__(self):
         en = '' if self.errno is None else ' %i' % self.errno
         return '[PAM Error%s] %s' % (en, self.message)
@@ -145,7 +181,7 @@ PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
         POINTER(PamHandle)]
 
 PAM_END = LIBPAM.pam_end
-PAM_END.restpe = c_int
+PAM_END.restype = c_int
 PAM_END.argtypes = [PamHandle, c_int]
 
 PAM_AUTHENTICATE = LIBPAM.pam_authenticate
@@ -172,6 +208,18 @@ PAM_SETCRED = LIBPAM.pam_setcred
 PAM_SETCRED.restype = c_int
 PAM_SETCRED.argtypes = [PamHandle, c_int]
 
+PAM_GETENV = LIBPAM.pam_getenv
+PAM_GETENV.restype = c_char_p
+PAM_GETENV.argtypes = [PamHandle, c_char_p]
+
+PAM_GETENVLIST = LIBPAM.pam_getenvlist
+PAM_GETENVLIST.restype = POINTER(c_char_p)
+PAM_GETENVLIST.argtypes = [PamHandle]
+
+PAM_PUTENV = LIBPAM.pam_putenv
+PAM_PUTENV.restype = c_int
+PAM_PUTENV.argtypes = [PamHandle, c_char_p]
+
 
 @CONV_FUNC
 def default_conv(n_messages, messages, p_response, app_data):
@@ -193,7 +241,7 @@ def default_conv(n_messages, messages, p_response, app_data):
                 read_pw = raw_input
             else:
                 read_pw = getpass.getpass
-            
+
             pw_copy = STRDUP(_cast_bytes(read_pw(msg_string)))
             p_response.contents[i].resp = pw_copy
             p_response.contents[i].resp_retcode = 0
@@ -224,7 +272,7 @@ def new_simple_password_conv(passwords, encoding):
 def pam_start(service, username, conv_func=default_conv, encoding='utf8'):
     service = _cast_bytes(service, encoding)
     username = _cast_bytes(username, encoding)
-    
+
     handle = PamHandle()
     conv = pointer(PamConv(conv_func, 0))
     retval = PAM_START(service, username, conv, pointer(handle))
@@ -235,7 +283,7 @@ def pam_start(service, username, conv_func=default_conv, encoding='utf8'):
 
     return handle
 
-def pam_end(handle, retval):
+def pam_end(handle, retval=0):
     e = PAM_END(handle, retval)
     if retval == 0 and e == 0:
         return
@@ -244,7 +292,7 @@ def pam_end(handle, retval):
     raise PAMError(errno=retval)
 
 def authenticate(username, password=None, service='login', encoding='utf-8',
-                 resetcred=PAM_REINITIALIZE_CRED):
+                 resetcred=PAM_REINITIALIZE_CRED, close=True):
     """Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
 
@@ -265,6 +313,10 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
     ``resetcred``: Use the pam_setcred() function to
                    reinitialize the credentials.
                    Defaults to 'PAM_REINITIALIZE_CRED'.
+
+    ``close``: If True (default) the transaction will be closed after
+                   authentication; if False the (open) PamHandle instance
+                   will be returned.
     """
 
     if password is None:
@@ -282,7 +334,12 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
     if retval == 0 and resetcred:
         PAM_SETCRED(handle, resetcred)
 
-    return pam_end(handle, retval)
+    if close:
+        return pam_end(handle, retval)
+    elif retval != 0:
+        raise PAMError(errno=retval)
+    else:
+        return handle
 
 def open_session(username, service='login', encoding='utf-8'):
     handle = pam_start(service, username, encoding=encoding)
