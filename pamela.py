@@ -24,7 +24,7 @@ __all__ = [
     'change_password',
 ]
 
-from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
+from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof, byref
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 import getpass
@@ -69,6 +69,18 @@ PAM_DELETE_CRED = 0x0004
 PAM_REINITIALIZE_CRED = 0x0008
 PAM_REFRESH_CRED = 0x0010
 
+# constants for PAM_ variables for pam_set_item()
+PAM_SERVICE = 1
+PAM_USER = 2
+PAM_TTY = 3
+PAM_RHOST = 4
+PAM_RUSER = 8
+
+# PAM error codes
+PAM_SUCCESS = 0
+PAM_BAD_ITEM = 29
+
+
 class PamHandle(Structure):
     """wrapper class for pam_handle_t"""
     _fields_ = [
@@ -78,6 +90,24 @@ class PamHandle(Structure):
     def __init__(self):
         Structure.__init__(self)
         self.handle = 0
+
+    def get_item(self, item_type, encoding='utf-8'):
+        voidPointer = c_void_p()
+        retval = PAM_GET_ITEM(self, item_type, byref(voidPointer))
+        if retval == PAM_BAD_ITEM:
+            return None
+        if retval != PAM_SUCCESS:
+            raise PAMError(errno=retval)
+
+        s = cast(voidPointer, c_char_p)
+        if s.value is None:
+            return None
+        return _bytes_to_str(s.value, encoding)
+
+    def set_item(self, item_type, item, encoding='utf-8'):
+        retval = PAM_SET_ITEM(self, item_type, item.encode(encoding))
+        if retval != PAM_SUCCESS:
+            raise PAMError(errno=retval)
 
     def get_env(self, var, encoding='utf-8'):
         ret = PAM_GETENV(self, var.encode(encoding))
@@ -90,14 +120,14 @@ class PamHandle(Structure):
         retval = PAM_PUTENV(
             self,
             ('%s=%s' % (k, v)).encode(encoding))
-        if retval != 0:
+        if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
     def del_env(self, k, encoding='utf-8'):
         retval = PAM_PUTENV(
             self,
             k.encode(encoding))
-        if retval != 0:
+        if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
     def get_envlist(self, encoding='utf-8'):
@@ -113,6 +143,16 @@ class PamHandle(Structure):
             else:
                 break
         return parsed
+
+    def open_session(self):
+        retval = PAM_OPEN_SESSION(self, 0)
+        if retval != PAM_SUCCESS:
+            raise PAMError(errno=retval)
+
+    def close_session(self):
+        retval = PAM_CLOSE_SESSION(self, 0)
+        if retval != PAM_SUCCESS:
+            raise PAMError(errno=retval)
 
 
 PAM_STRERROR = LIBPAM.pam_strerror
@@ -220,6 +260,13 @@ PAM_PUTENV = LIBPAM.pam_putenv
 PAM_PUTENV.restype = c_int
 PAM_PUTENV.argtypes = [PamHandle, c_char_p]
 
+PAM_SET_ITEM = LIBPAM.pam_set_item
+PAM_SET_ITEM.restype = c_int
+PAM_SET_ITEM.argtypes = [PamHandle, c_int, c_char_p]
+
+PAM_GET_ITEM = LIBPAM.pam_get_item
+PAM_GET_ITEM.restype = c_int
+PAM_GET_ITEM.argtypes = [PamHandle, c_int, POINTER(c_void_p)]
 
 @CONV_FUNC
 def default_conv(n_messages, messages, p_response, app_data):

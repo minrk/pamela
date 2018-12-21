@@ -63,3 +63,15 @@ def test_environment():
         handle.get_env(k2)
 
     assert handle.get_envlist() == {k1: v1}
+
+    # test set_item / get_item
+    handle.set_item(pamela.PAM_RHOST, '127.0.0.1')
+
+    assert handle.get_item(pamela.PAM_RHOST) == '127.0.0.1'
+    assert handle.get_item(pamela.PAM_RUSER) == None
+
+
+def test_session():
+    handle = pamela.pam_start(getpass.getuser(), 'login')
+    handle.open_session()
+    handle.close_session()
