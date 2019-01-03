@@ -10,6 +10,12 @@ python:
     - nightly
 sudo: false
 install:
+    - |
+      if [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
+        # install pip 10 first
+        # to get requires_python behavior right
+        pip install pip==10.*
+      fi
     - pip install --upgrade setuptools pip
     - pip install --upgrade pytest .
 script:
