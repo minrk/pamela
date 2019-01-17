@@ -12,10 +12,10 @@ sudo: false
 install:
   - |
     PIP_MAJOR=$(python -c 'import pip; print(pip.__version__)' | awk -F '.' '{print $1}')
-    if [[ "$PIP_MAJOR" -lt "10" ]]; then
-      # if pip is super old, install pip 10 first
+    if [[ "$PIP_MAJOR" -lt "9" ]]; then
+      # if pip is super old, install pip 9 first
       # to get requires_python behavior right
-      pip install pip==10.*
+      pip install pip==9.*
     fi
   - pip install --upgrade setuptools pip
   - pip install --upgrade pytest .
