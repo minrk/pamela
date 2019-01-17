@@ -340,8 +340,8 @@ def pam_end(handle, retval=0):
 
 def authenticate(username, password=None, service='login', encoding='utf-8',
                  resetcred=PAM_REINITIALIZE_CRED, close=True):
-    """Returns True if the given username and password authenticate for the
-    given service.  Returns False otherwise
+    """Returns None if the given username and password authenticate for the
+    given service.  Raises PAMError otherwise
 
     ``username``: the username to authenticate
 
