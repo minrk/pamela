@@ -1,18 +1,33 @@
 language: python
 python:
-    - 3.6
-    - 3.5
-    - 3.4
-    - 2.7
-    - 2.6
-    - 3.3
-    - pypy
-    - nightly
+  - 3.6
+  - 3.5
+  - 3.4
+  - 2.7
+  - 2.6
+  - 3.3
+  - pypy
+  - nightly
 sudo: false
 install:
-    - pip install --upgrade setuptools pip
-    - pip install --upgrade pytest .
+  - |
+    PIP_MAJOR=$(python -c 'import pip; print(pip.__version__)' | awk -F '.' '{print $1}')
+    if [[ "$PIP_MAJOR" -lt "9" ]]; then
+      # if pip is super old, install pip 9 first
+      # to get requires_python behavior right
+      pip install pip==9.*
+    fi
+  - pip install --upgrade setuptools pip
+  - pip install --upgrade pytest .
 script:
-    # assert=plain workaround for pytest#774
-    - py.test --assert=plain test_pamela.py
+  # assert=plain workaround for pytest#774
+  - py.test --assert=plain test_pamela.py
 
+branches:
+  only:
+    - master
+
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
