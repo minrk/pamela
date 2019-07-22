@@ -345,7 +345,8 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
 
     ``username``: the username to authenticate
 
-    ``password``: the password in plain text
+    ``password``: the password in plain text. It can also be an iterable of
+                  passwords when using multifactor authentication.
                   Defaults to None to use PAM's conversation interface
 
     ``service``: the PAM service to authenticate against.
@@ -369,8 +370,9 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
     if password is None:
         conv_func = default_conv
     else:
-        password = _cast_bytes(password, encoding)
-        conv_func = new_simple_password_conv((password, ), encoding)
+        if isinstance(password, str):
+            password = (password,)
+        conv_func = new_simple_password_conv(password, encoding)
 
     handle = pam_start(service, username, conv_func=conv_func, encoding=encoding)
 
