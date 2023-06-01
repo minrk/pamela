@@ -12,7 +12,7 @@ a user against the Pluggable Authentication Modules (PAM) on the system.
 Implemented using ctypes, so no compilation is necessary.
 """
 
-__version__ = '1.0.1.dev'
+__version__ = '1.1.0'
 
 __all__ = [
     'PAMError',
