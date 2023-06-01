@@ -11,7 +11,6 @@ a user against the Pluggable Authentication Modules (PAM) on the system.
 
 Implemented using ctypes, so no compilation is necessary.
 """
-from __future__ import print_function
 
 __version__ = '1.0.1.dev'
 
@@ -24,21 +23,33 @@ __all__ = [
     'change_password',
 ]
 
-from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof, byref
-from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
-from ctypes.util import find_library
 import getpass
 import sys
+from ctypes import (
+    CDLL,
+    CFUNCTYPE,
+    POINTER,
+    Structure,
+    byref,
+    c_char,
+    c_char_p,
+    c_int,
+    c_uint,
+    c_void_p,
+    cast,
+    pointer,
+    sizeof,
+)
+from ctypes.util import find_library
 
 # Python 3 bytes/unicode compat
-if sys.version_info >= (3,):
-    unicode = str
-    raw_input = input
-    def _bytes_to_str(s, encoding='utf8'):
-        return s.decode(encoding)
-else:
-    def _bytes_to_str(s, encoding='utf8'):
-        return s
+unicode = str
+raw_input = input
+
+
+def _bytes_to_str(s, encoding='utf8'):
+    return s.decode(encoding)
+
 
 def _cast_bytes(s, encoding='utf8'):
     if isinstance(s, unicode):
@@ -55,7 +66,7 @@ CALLOC.argtypes = [c_uint, c_uint]
 
 STRDUP = LIBC.strdup
 STRDUP.argstypes = [c_char_p]
-STRDUP.restype = POINTER(c_char) # NOT c_char_p !!!!
+STRDUP.restype = POINTER(c_char)  # NOT c_char_p !!!!
 
 # Various constants
 PAM_PROMPT_ECHO_OFF = 1
@@ -83,9 +94,8 @@ PAM_BAD_ITEM = 29
 
 class PamHandle(Structure):
     """wrapper class for pam_handle_t"""
-    _fields_ = [
-            ("handle", c_void_p)
-            ]
+
+    _fields_ = [("handle", c_void_p)]
 
     def __init__(self):
         Structure.__init__(self)
@@ -117,16 +127,12 @@ class PamHandle(Structure):
             return ret.decode(encoding)
 
     def put_env(self, k, v, encoding='utf-8'):
-        retval = PAM_PUTENV(
-            self,
-            ('%s=%s' % (k, v)).encode(encoding))
+        retval = PAM_PUTENV(self, (f'{k}={v}').encode(encoding))
         if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
     def del_env(self, k, encoding='utf-8'):
-        retval = PAM_PUTENV(
-            self,
-            k.encode(encoding))
+        retval = PAM_PUTENV(self, k.encode(encoding))
         if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
@@ -159,13 +165,16 @@ PAM_STRERROR = LIBPAM.pam_strerror
 PAM_STRERROR.restype = c_char_p
 PAM_STRERROR.argtypes = [PamHandle, c_int]
 
+
 def pam_strerror(handle, errno):
     """Wrap bytes-only PAM_STRERROR in native str"""
     return _bytes_to_str(PAM_STRERROR(handle, errno))
 
+
 class PAMError(Exception):
     errno = None
     message = ''
+
     def __init__(self, message='', errno=None):
         self.errno = errno
         if message:
@@ -178,47 +187,51 @@ class PAMError(Exception):
 
     def __repr__(self):
         en = '' if self.errno is None else ' %i' % self.errno
-        return "<PAM Error%s: '%s'>" % (en, self.message)
+        return f"<PAM Error{en}: '{self.message}'>"
 
     def __str__(self):
         en = '' if self.errno is None else ' %i' % self.errno
-        return '[PAM Error%s] %s' % (en, self.message)
+        return f'[PAM Error{en}] {self.message}'
+
 
 class PamMessage(Structure):
     """wrapper class for pam_message structure"""
+
     _fields_ = [
-            ("msg_style", c_int),
-            ("msg", POINTER(c_char)),
-            ]
+        ("msg_style", c_int),
+        ("msg", POINTER(c_char)),
+    ]
 
     def __repr__(self):
         return "<PamMessage %i '%s'>" % (self.msg_style, _bytes_to_str(self.msg))
 
+
 class PamResponse(Structure):
     """wrapper class for pam_response structure"""
+
     _fields_ = [
-            ("resp", POINTER(c_char)),
-            ("resp_retcode", c_int),
-            ]
+        ("resp", POINTER(c_char)),
+        ("resp_retcode", c_int),
+    ]
 
     def __repr__(self):
         return "<PamResponse %i '%s'>" % (self.resp_retcode, _bytes_to_str(self.resp))
 
-CONV_FUNC = CFUNCTYPE(c_int,
-        c_int, POINTER(POINTER(PamMessage)),
-               POINTER(POINTER(PamResponse)), c_void_p)
+
+CONV_FUNC = CFUNCTYPE(
+    c_int, c_int, POINTER(POINTER(PamMessage)), POINTER(POINTER(PamResponse)), c_void_p
+)
+
 
 class PamConv(Structure):
     """wrapper class for pam_conv structure"""
-    _fields_ = [
-            ("conv", CONV_FUNC),
-            ("appdata_ptr", c_void_p)
-            ]
+
+    _fields_ = [("conv", CONV_FUNC), ("appdata_ptr", c_void_p)]
+
 
 PAM_START = LIBPAM.pam_start
 PAM_START.restype = c_int
-PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv),
-        POINTER(PamHandle)]
+PAM_START.argtypes = [c_char_p, c_char_p, POINTER(PamConv), POINTER(PamHandle)]
 
 PAM_END = LIBPAM.pam_end
 PAM_END.restype = c_int
@@ -268,6 +281,7 @@ PAM_GET_ITEM = LIBPAM.pam_get_item
 PAM_GET_ITEM.restype = c_int
 PAM_GET_ITEM.argtypes = [PamHandle, c_int, POINTER(c_void_p)]
 
+
 @CONV_FUNC
 def default_conv(n_messages, messages, p_response, app_data):
     addr = CALLOC(n_messages, sizeof(PamResponse))
@@ -296,9 +310,11 @@ def default_conv(n_messages, messages, p_response, app_data):
             print(repr(messages[i].contents))
     return 0
 
+
 def new_simple_password_conv(passwords, encoding):
     passwords = [_cast_bytes(password, encoding) for password in passwords]
     passwords.reverse()
+
     @CONV_FUNC
     def conv_func(n_messages, messages, p_response, app_data):
         """Simple conversation function that responds to any
@@ -314,7 +330,9 @@ def new_simple_password_conv(passwords, encoding):
                 p_response.contents[i].resp = pw_copy
                 p_response.contents[i].resp_retcode = 0
         return 0
+
     return conv_func
+
 
 def pam_start(service, username, conv_func=default_conv, encoding='utf8'):
     service = _cast_bytes(service, encoding)
@@ -330,6 +348,7 @@ def pam_start(service, username, conv_func=default_conv, encoding='utf8'):
 
     return handle
 
+
 def pam_end(handle, retval=0):
     e = PAM_END(handle, retval)
     if retval == 0 and e == 0:
@@ -338,8 +357,15 @@ def pam_end(handle, retval=0):
         retval = e
     raise PAMError(errno=retval)
 
-def authenticate(username, password=None, service='login', encoding='utf-8',
-                 resetcred=PAM_REINITIALIZE_CRED, close=True):
+
+def authenticate(
+    username,
+    password=None,
+    service='login',
+    encoding='utf-8',
+    resetcred=PAM_REINITIALIZE_CRED,
+    close=True,
+):
     """Returns None if the given username and password authenticate for the
     given service.  Raises PAMError otherwise
 
@@ -390,17 +416,21 @@ def authenticate(username, password=None, service='login', encoding='utf-8',
     else:
         return handle
 
+
 def open_session(username, service='login', encoding='utf-8'):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_OPEN_SESSION(handle, 0))
+
 
 def close_session(username, service='login', encoding='utf-8'):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_CLOSE_SESSION(handle, 0))
 
+
 def check_account(username, service='login', encoding='utf-8'):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_ACCT_MGMT(handle, 0))
+
 
 def change_password(username, password=None, service='login', encoding='utf-8'):
     if password is None:
@@ -414,34 +444,72 @@ def change_password(username, password=None, service='login', encoding='utf-8'):
     handle = pam_start(service, username, conv_func=conv_func, encoding=encoding)
     return pam_end(handle, PAM_CHAUTHTOK(handle, 0))
 
+
 if __name__ == "__main__":
     import optparse
 
     usage = "usage: %prog [options] [username]"
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option('-a', '--authenticate', dest='authenticate',
-        action='store_true', help='authenticate user')
-    parser.add_option('-o', '--open-session', dest='open_session',
-        action='store_true', help='open session')
-    parser.add_option('-c', '--close-session', dest='close_session',
-        action='store_true', help='close session')
-    parser.add_option('-v', '--validate-account', dest='validate_account',
-        action='store_true', help='check account validity')
-    parser.add_option('-p', '--change-password', dest='change_password',
-        action='store_true', help='change password')
-    parser.add_option('-s', '--service', dest='service',
-        action='store', default='login',
-        help='PAM service to use [default: %default]')
-    parser.add_option('-P', '--ask-password', dest='ask_password',
-        action='store_true', help="own password prompt instead of PAM's")
+    parser.add_option(
+        '-a',
+        '--authenticate',
+        dest='authenticate',
+        action='store_true',
+        help='authenticate user',
+    )
+    parser.add_option(
+        '-o',
+        '--open-session',
+        dest='open_session',
+        action='store_true',
+        help='open session',
+    )
+    parser.add_option(
+        '-c',
+        '--close-session',
+        dest='close_session',
+        action='store_true',
+        help='close session',
+    )
+    parser.add_option(
+        '-v',
+        '--validate-account',
+        dest='validate_account',
+        action='store_true',
+        help='check account validity',
+    )
+    parser.add_option(
+        '-p',
+        '--change-password',
+        dest='change_password',
+        action='store_true',
+        help='change password',
+    )
+    parser.add_option(
+        '-s',
+        '--service',
+        dest='service',
+        action='store',
+        default='login',
+        help='PAM service to use [default: %default]',
+    )
+    parser.add_option(
+        '-P',
+        '--ask-password',
+        dest='ask_password',
+        action='store_true',
+        help="own password prompt instead of PAM's",
+    )
 
     (o, a) = parser.parse_args()
 
-    if not (o.authenticate or \
-        o.open_session or \
-        o.close_session or \
-        o.validate_account or \
-        o.change_password):
+    if not (
+        o.authenticate
+        or o.open_session
+        or o.close_session
+        or o.validate_account
+        or o.change_password
+    ):
         parser.error("One of -a, -o, -c, -v or -p is mandatory")
 
     try:
