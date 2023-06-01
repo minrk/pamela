@@ -24,7 +24,6 @@ on:
 
 jobs:
   build-release:
-    environment: release
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
