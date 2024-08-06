@@ -1,5 +1,9 @@
 # Changes in pamela
 
+## 1.1.0
+
+- Add OTP support in `authenticate` by accepting a list for password.
+
 ## 1.0.0
 
 - Add environment methods to PAMHandle: get_env, put_env, del_env, get_envlist
