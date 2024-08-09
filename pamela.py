@@ -365,6 +365,7 @@ def authenticate(
     encoding='utf-8',
     resetcred=PAM_REINITIALIZE_CRED,
     close=True,
+    check=True,
 ):
     """Returns None if the given username and password authenticate for the
     given service.  Raises PAMError otherwise
@@ -388,6 +389,9 @@ def authenticate(
                    reinitialize the credentials.
                    Defaults to 'PAM_REINITIALIZE_CRED'.
 
+    ``check``: If True (default) Check that account is valid with PAM_ACCT_MGMT.
+               added in 1.2.
+
     ``close``: If True (default) the transaction will be closed after
                    authentication; if False the (open) PamHandle instance
                    will be returned.
@@ -403,6 +407,9 @@ def authenticate(
     handle = pam_start(service, username, conv_func=conv_func, encoding=encoding)
 
     retval = PAM_AUTHENTICATE(handle, 0)
+    if retval == 0 and check:
+        retval = PAM_ACCT_MGMT(handle, 0)
+
     # Re-initialize credentials (for Kerberos users, etc)
     # Don't check return code of pam_setcred(), it shouldn't matter
     # if this fails
