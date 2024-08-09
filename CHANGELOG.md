@@ -1,5 +1,9 @@
 # Changes in pamela
 
+## 1.2.0
+
+- Add `check` keyword argument (default: True) to `authenticate` to call PAM_ACCT_MGMT
+
 ## 1.1.0
 
 - Add OTP support in `authenticate` by accepting a list for password.
