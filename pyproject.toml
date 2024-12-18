@@ -31,10 +31,12 @@ Funding = "https://jupyter.org/about"
 Source = "https://github.com/jupyterhub/pamela"
 Tracker = "https://github.com/jupyterhub/pamela/issues"
 
-
 # dynamic sources of metadata in other files
 [tool.setuptools.dynamic]
 readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.setuptools]
+py-modules = ["pamela"]
 
 # setuptools_scm needs a section to be present
 [tool.setuptools_scm]
