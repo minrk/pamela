@@ -12,15 +12,15 @@ a user against the Pluggable Authentication Modules (PAM) on the system.
 Implemented using ctypes, so no compilation is necessary.
 """
 
-__version__ = '1.2.0'
+__version__ = "1.2.0"
 
 __all__ = [
-    'PAMError',
-    'authenticate',
-    'open_session',
-    'close_session',
-    'check_account',
-    'change_password',
+    "PAMError",
+    "authenticate",
+    "open_session",
+    "close_session",
+    "check_account",
+    "change_password",
 ]
 
 import getpass
@@ -47,11 +47,11 @@ unicode = str
 raw_input = input
 
 
-def _bytes_to_str(s, encoding='utf8'):
+def _bytes_to_str(s, encoding="utf8"):
     return s.decode(encoding)
 
 
-def _cast_bytes(s, encoding='utf8'):
+def _cast_bytes(s, encoding="utf8"):
     if isinstance(s, unicode):
         return s.encode(encoding)
     return s
@@ -101,7 +101,7 @@ class PamHandle(Structure):
         Structure.__init__(self)
         self.handle = 0
 
-    def get_item(self, item_type, encoding='utf-8'):
+    def get_item(self, item_type, encoding="utf-8"):
         voidPointer = c_void_p()
         retval = PAM_GET_ITEM(self, item_type, byref(voidPointer))
         if retval == PAM_BAD_ITEM:
@@ -114,29 +114,29 @@ class PamHandle(Structure):
             return None
         return _bytes_to_str(s.value, encoding)
 
-    def set_item(self, item_type, item, encoding='utf-8'):
+    def set_item(self, item_type, item, encoding="utf-8"):
         retval = PAM_SET_ITEM(self, item_type, item.encode(encoding))
         if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
-    def get_env(self, var, encoding='utf-8'):
+    def get_env(self, var, encoding="utf-8"):
         ret = PAM_GETENV(self, var.encode(encoding))
         if ret is None:
             raise PAMError()
         else:
             return ret.decode(encoding)
 
-    def put_env(self, k, v, encoding='utf-8'):
-        retval = PAM_PUTENV(self, (f'{k}={v}').encode(encoding))
+    def put_env(self, k, v, encoding="utf-8"):
+        retval = PAM_PUTENV(self, (f"{k}={v}").encode(encoding))
         if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
-    def del_env(self, k, encoding='utf-8'):
+    def del_env(self, k, encoding="utf-8"):
         retval = PAM_PUTENV(self, k.encode(encoding))
         if retval != PAM_SUCCESS:
             raise PAMError(errno=retval)
 
-    def get_envlist(self, encoding='utf-8'):
+    def get_envlist(self, encoding="utf-8"):
         ret = PAM_GETENVLIST(self)
         if ret is None:
             raise PAMError()
@@ -144,7 +144,7 @@ class PamHandle(Structure):
         parsed = {}
         for i in PAM_GETENVLIST(self):
             if i:
-                k, v = i.decode(encoding).split('=', 1)
+                k, v = i.decode(encoding).split("=", 1)
                 parsed[k] = v
             else:
                 break
@@ -173,9 +173,9 @@ def pam_strerror(handle, errno):
 
 class PAMError(Exception):
     errno = None
-    message = ''
+    message = ""
 
-    def __init__(self, message='', errno=None):
+    def __init__(self, message="", errno=None):
         self.errno = errno
         if message:
             self.message = message
@@ -186,12 +186,12 @@ class PAMError(Exception):
                 self.message = pam_strerror(PamHandle(), errno)
 
     def __repr__(self):
-        en = '' if self.errno is None else ' %i' % self.errno
+        en = "" if self.errno is None else " %i" % self.errno
         return f"<PAM Error{en}: '{self.message}'>"
 
     def __str__(self):
-        en = '' if self.errno is None else ' %i' % self.errno
-        return f'[PAM Error{en}] {self.message}'
+        en = "" if self.errno is None else " %i" % self.errno
+        return f"[PAM Error{en}] {self.message}"
 
 
 class PamMessage(Structure):
@@ -334,7 +334,7 @@ def new_simple_password_conv(passwords, encoding):
     return conv_func
 
 
-def pam_start(service, username, conv_func=default_conv, encoding='utf8'):
+def pam_start(service, username, conv_func=default_conv, encoding="utf8"):
     service = _cast_bytes(service, encoding)
     username = _cast_bytes(username, encoding)
 
@@ -361,8 +361,8 @@ def pam_end(handle, retval=0):
 def authenticate(
     username,
     password=None,
-    service='login',
-    encoding='utf-8',
+    service="login",
+    encoding="utf-8",
     resetcred=PAM_REINITIALIZE_CRED,
     close=True,
     check=True,
@@ -424,22 +424,22 @@ def authenticate(
         return handle
 
 
-def open_session(username, service='login', encoding='utf-8'):
+def open_session(username, service="login", encoding="utf-8"):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_OPEN_SESSION(handle, 0))
 
 
-def close_session(username, service='login', encoding='utf-8'):
+def close_session(username, service="login", encoding="utf-8"):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_CLOSE_SESSION(handle, 0))
 
 
-def check_account(username, service='login', encoding='utf-8'):
+def check_account(username, service="login", encoding="utf-8"):
     handle = pam_start(service, username, encoding=encoding)
     return pam_end(handle, PAM_ACCT_MGMT(handle, 0))
 
 
-def change_password(username, password=None, service='login', encoding='utf-8'):
+def change_password(username, password=None, service="login", encoding="utf-8"):
     if password is None:
         conv_func = default_conv
     else:
@@ -458,53 +458,53 @@ if __name__ == "__main__":
     usage = "usage: %prog [options] [username]"
     parser = optparse.OptionParser(usage=usage)
     parser.add_option(
-        '-a',
-        '--authenticate',
-        dest='authenticate',
-        action='store_true',
-        help='authenticate user',
+        "-a",
+        "--authenticate",
+        dest="authenticate",
+        action="store_true",
+        help="authenticate user",
     )
     parser.add_option(
-        '-o',
-        '--open-session',
-        dest='open_session',
-        action='store_true',
-        help='open session',
+        "-o",
+        "--open-session",
+        dest="open_session",
+        action="store_true",
+        help="open session",
     )
     parser.add_option(
-        '-c',
-        '--close-session',
-        dest='close_session',
-        action='store_true',
-        help='close session',
+        "-c",
+        "--close-session",
+        dest="close_session",
+        action="store_true",
+        help="close session",
     )
     parser.add_option(
-        '-v',
-        '--validate-account',
-        dest='validate_account',
-        action='store_true',
-        help='check account validity',
+        "-v",
+        "--validate-account",
+        dest="validate_account",
+        action="store_true",
+        help="check account validity",
     )
     parser.add_option(
-        '-p',
-        '--change-password',
-        dest='change_password',
-        action='store_true',
-        help='change password',
+        "-p",
+        "--change-password",
+        dest="change_password",
+        action="store_true",
+        help="change password",
     )
     parser.add_option(
-        '-s',
-        '--service',
-        dest='service',
-        action='store',
-        default='login',
-        help='PAM service to use [default: %default]',
+        "-s",
+        "--service",
+        dest="service",
+        action="store",
+        default="login",
+        help="PAM service to use [default: %default]",
     )
     parser.add_option(
-        '-P',
-        '--ask-password',
-        dest='ask_password',
-        action='store_true',
+        "-P",
+        "--ask-password",
+        dest="ask_password",
+        action="store_true",
         help="own password prompt instead of PAM's",
     )
 
